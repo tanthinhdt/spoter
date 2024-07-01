@@ -3,27 +3,34 @@ import torch
 
 import pandas as pd
 import torch.utils.data as torch_data
-
 from random import randrange
 from augmentations import *
 from normalization.body_normalization import BODY_IDENTIFIERS
 from normalization.hand_normalization import HAND_IDENTIFIERS
-from normalization.body_normalization import normalize_single_dict as normalize_single_body_dict
-from normalization.hand_normalization import normalize_single_dict as normalize_single_hand_dict
+from normalization.body_normalization import (
+    normalize_single_dict as normalize_single_body_dict,
+)
+from normalization.hand_normalization import (
+    normalize_single_dict as normalize_single_hand_dict,
+)
 
-HAND_IDENTIFIERS = [id + "_0" for id in HAND_IDENTIFIERS] + [id + "_1" for id in HAND_IDENTIFIERS]
+HAND_IDENTIFIERS = [id + "_0" for id in HAND_IDENTIFIERS] + [
+    id + "_1" for id in HAND_IDENTIFIERS
+]
 
 
 def load_dataset(file_location: str):
-
     # Load the datset csv file
     df = pd.read_csv(file_location, encoding="utf-8")
 
     # TO BE DELETED
-    df.columns = [item.replace("_left_", "_0_").replace("_right_", "_1_") for item in list(df.columns)]
+    df.columns = [
+        item.replace("_left_", "_0_").replace("_right_", "_1_")
+        for item in list(df.columns)
+    ]
     if "neck_X" not in df.columns:
-        df["neck_X"] = [0 for _ in range(df.shape[0])]
-        df["neck_Y"] = [0 for _ in range(df.shape[0])]
+        df["neck_X"] = [str(0) for _ in range(df.shape[0])]
+        df["neck_Y"] = [str(0) for _ in range(df.shape[0])]
 
     # TEMP
     labels = df["labels"].to_list()
@@ -31,7 +38,13 @@ def load_dataset(file_location: str):
     data = []
 
     for row_index, row in df.iterrows():
-        current_row = np.empty(shape=(len(ast.literal_eval(row["leftEar_X"])), len(BODY_IDENTIFIERS + HAND_IDENTIFIERS), 2))
+        current_row = np.empty(
+            shape=(
+                len(ast.literal_eval(row["leftEar_X"])),
+                len(BODY_IDENTIFIERS + HAND_IDENTIFIERS),
+                2,
+            )
+        )
         for index, identifier in enumerate(BODY_IDENTIFIERS + HAND_IDENTIFIERS):
             current_row[:, index, 0] = ast.literal_eval(row[identifier + "_X"])
             current_row[:, index, 1] = ast.literal_eval(row[identifier + "_Y"])
@@ -54,11 +67,21 @@ def tensor_to_dictionary(landmarks_tensor: torch.Tensor) -> dict:
 
 def dictionary_to_tensor(landmarks_dict: dict) -> torch.Tensor:
 
-    output = np.empty(shape=(len(landmarks_dict["leftEar"]), len(BODY_IDENTIFIERS + HAND_IDENTIFIERS), 2))
+    output = np.empty(
+        shape=(
+            len(landmarks_dict["leftEar"]),
+            len(BODY_IDENTIFIERS + HAND_IDENTIFIERS),
+            2,
+        )
+    )
 
     for landmark_index, identifier in enumerate(BODY_IDENTIFIERS + HAND_IDENTIFIERS):
-        output[:, landmark_index, 0] = [frame[0] for frame in landmarks_dict[identifier]]
-        output[:, landmark_index, 1] = [frame[1] for frame in landmarks_dict[identifier]]
+        output[:, landmark_index, 0] = [
+            frame[0] for frame in landmarks_dict[identifier]
+        ]
+        output[:, landmark_index, 1] = [
+            frame[1] for frame in landmarks_dict[identifier]
+        ]
 
     return torch.from_numpy(output)
 
@@ -70,8 +93,15 @@ class CzechSLRDataset(torch_data.Dataset):
     data: [np.ndarray]
     labels: [np.ndarray]
 
-    def __init__(self, dataset_filename: str, num_labels=5, transform=None, augmentations=False,
-                 augmentations_prob=0.5, normalize=True):
+    def __init__(
+        self,
+        dataset_filename: str,
+        num_labels=5,
+        transform=None,
+        augmentations=False,
+        augmentations_prob=0.5,
+        normalize=True,
+    ):
         """
         Initiates the HPOESDataset with the pre-loaded data from the h5 file.
 
@@ -101,7 +131,7 @@ class CzechSLRDataset(torch_data.Dataset):
         """
 
         depth_map = torch.from_numpy(np.copy(self.data[idx]))
-        label = torch.Tensor([self.labels[idx] - 1])
+        label = torch.Tensor([self.labels[idx]])
 
         depth_map = tensor_to_dictionary(depth_map)
 
